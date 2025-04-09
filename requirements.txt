@@ -1,0 +1,4 @@
+ebooklib==0.18
+openai==0.28.0
+Pillow==11.1.0
+streamlit==1.44.1
