@@ -13,29 +13,26 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 
 def upload_to_drive(file_bytes, filename, folder_id=None):
-    SCOPES = ['https://www.googleapis.com/auth/drive']
+    SCOPES = ["https://www.googleapis.com/auth/drive"]
     
-    # Obtenha as credenciais do secrets
+    # Acessa as credenciais dos Secrets
     service_account_info = st.secrets["service_account"]
     credentials = service_account.Credentials.from_service_account_info(
         service_account_info, scopes=SCOPES
     )
     
-    service = build('drive', 'v3', credentials=credentials)
+    service = build("drive", "v3", credentials=credentials)
     
-    file_metadata = {
-        'name': filename,
-        'mimeType': 'application/zip'
-    }
+    file_metadata = {"name": filename, "mimeType": "application/zip"}
     if folder_id:
-        file_metadata['parents'] = [folder_id]
+        file_metadata["parents"] = [folder_id]
     
-    media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype='application/zip')
+    media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype="application/zip")
     file = service.files().create(
-        body=file_metadata, media_body=media, fields='id'
+        body=file_metadata, media_body=media, fields="id"
     ).execute()
     
-    return file.get('id')
+    return file.get("id")
 # ------------------------ Configuração da API OpenAI ------------------------
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
