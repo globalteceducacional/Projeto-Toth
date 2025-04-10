@@ -13,24 +13,14 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 
 def upload_to_drive(file_bytes, filename, folder_id=None):
-    """
-    Faz upload do arquivo para o Google Drive usando a variável de ambiente 
-    GOOGLE_APPLICATION_CREDENTIALS, que deve conter o caminho para o JSON de service account.
-    """
     SCOPES = ['https://www.googleapis.com/auth/drive']
-
-    # Pega o caminho do JSON a partir da variável de ambiente
-    service_account_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")  
-    if not service_account_path:
-        st.error("A variável de ambiente GOOGLE_APPLICATION_CREDENTIALS não está definida!")
-        return
-
-    # Lê as credenciais do arquivo JSON
-    credentials = service_account.Credentials.from_service_account_file(
-        service_account_path, 
-        scopes=SCOPES
+    
+    # Obtenha as credenciais do secrets
+    service_account_info = st.secrets["service_account"]
+    credentials = service_account.Credentials.from_service_account_info(
+        service_account_info, scopes=SCOPES
     )
-
+    
     service = build('drive', 'v3', credentials=credentials)
     
     file_metadata = {
@@ -42,11 +32,9 @@ def upload_to_drive(file_bytes, filename, folder_id=None):
     
     media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype='application/zip')
     file = service.files().create(
-        body=file_metadata, 
-        media_body=media, 
-        fields='id'
+        body=file_metadata, media_body=media, fields='id'
     ).execute()
-
+    
     return file.get('id')
 # ------------------------ Configuração da API OpenAI ------------------------
 openai.api_key = os.getenv("OPENAI_API_KEY")
