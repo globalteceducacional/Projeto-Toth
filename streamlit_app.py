@@ -15,8 +15,11 @@ from googleapiclient.http import MediaIoBaseUpload
 def upload_to_drive(file_bytes, filename, folder_id=None):
     SCOPES = ["https://www.googleapis.com/auth/drive"]
     
-    # Acessa as credenciais dos Secrets
-    service_account_info = st.secrets["service_account"]
+    # Obtem as credenciais armazenadas nos Secrets
+    service_account_info = st.secrets["service_account"].copy()
+    # Converte literais "\n" para caracteres de nova linha, se necessário
+    service_account_info["private_key"] = service_account_info["private_key"].replace("\\n", "\n")
+    
     credentials = service_account.Credentials.from_service_account_info(
         service_account_info, scopes=SCOPES
     )
