@@ -18,9 +18,6 @@ def upload_to_drive(file_bytes, filename, folder_id=None):
     # Converte o conteúdo dos Secrets para um dicionário
     service_account_info = dict(st.secrets["service_account"])
     
-    # Tente com o replace e strip. Se não funcionar, remova essa linha.
-    service_account_info["private_key"] = service_account_info["private_key"].replace("\\n", "\n").strip()
-    
     credentials = service_account.Credentials.from_service_account_info(
         service_account_info, scopes=SCOPES
     )
