@@ -15,10 +15,11 @@ from googleapiclient.http import MediaIoBaseUpload
 def upload_to_drive(file_bytes, filename, folder_id=None):
     SCOPES = ["https://www.googleapis.com/auth/drive"]
     
-    # Converte os dados de st.secrets para um dicionário
+    # Converte o conteúdo dos Secrets para um dicionário
     service_account_info = dict(st.secrets["service_account"])
-    # Corrige os "\n" na chave privada
-    service_account_info["private_key"] = service_account_info["private_key"].replace("\\n", "\n")
+    
+    # Tente com o replace e strip. Se não funcionar, remova essa linha.
+    service_account_info["private_key"] = service_account_info["private_key"].replace("\\n", "\n").strip()
     
     credentials = service_account.Credentials.from_service_account_info(
         service_account_info, scopes=SCOPES
