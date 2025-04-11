@@ -1,6 +1,7 @@
 import streamlit as st
 import openai
 import os
+import json
 import base64
 from PIL import Image, ImageDraw, ImageFont
 from ebooklib import epub
@@ -13,27 +14,31 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 
 def upload_to_drive(file_bytes, filename, folder_id=None):
-    SCOPES = ["https://www.googleapis.com/auth/drive"]
+    """
+    Faz upload do arquivo para o Google Drive usando credenciais de serviço.
+    Se folder_id for fornecido, o arquivo é enviado para essa pasta específica.
+    """
+    SCOPES = ['https://www.googleapis.com/auth/drive']
+    # Tenta obter a chave via variável de ambiente ou st.secrets
+    service_account_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON") or st.secrets.get("GOOGLE_SERVICE_ACCOUNT_JSON")
+    if service_account_json is None:
+        st.error("A variável de ambiente (ou secret) GOOGLE_SERVICE_ACCOUNT_JSON não está definida!")
+        return None
+
+    service_account_info = json.loads(service_account_json)
+    credentials = service_account.Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
+    service = build('drive', 'v3', credentials=credentials)
     
-    # Converte o conteúdo dos Secrets para um dicionário
-    service_account_info = dict(st.secrets["service_account"])
-    
-    credentials = service_account.Credentials.from_service_account_info(
-        service_account_info, scopes=SCOPES
-    )
-    
-    service = build("drive", "v3", credentials=credentials)
-    
-    file_metadata = {"name": filename, "mimeType": "application/zip"}
+    file_metadata = {
+        'name': filename,
+        'mimeType': 'application/zip'
+    }
     if folder_id:
-        file_metadata["parents"] = [folder_id]
+        file_metadata['parents'] = [folder_id]
     
-    media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype="application/zip")
-    file = service.files().create(
-        body=file_metadata, media_body=media, fields="id"
-    ).execute()
-    
-    return file.get("id")
+    media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype='application/zip')
+    file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+    return file.get('id')
 # ------------------------ Configuração da API OpenAI ------------------------
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
