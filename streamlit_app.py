@@ -13,13 +13,11 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 
+# Caminho da logo
+LOGO_PATH = "Terra_Cultural_sem_fundo.png"
+
 def upload_to_drive(file_bytes, filename, folder_id=None):
-    """
-    Faz upload do arquivo para o Google Drive usando credenciais de serviço.
-    Se folder_id for fornecido, o arquivo é enviado para essa pasta específica.
-    """
     SCOPES = ['https://www.googleapis.com/auth/drive']
-    # Tenta obter a chave via variável de ambiente ou st.secrets
     service_account_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON") or st.secrets.get("GOOGLE_SERVICE_ACCOUNT_JSON")
     if service_account_json is None:
         st.error("A variável de ambiente (ou secret) GOOGLE_SERVICE_ACCOUNT_JSON não está definida!")
@@ -39,7 +37,7 @@ def upload_to_drive(file_bytes, filename, folder_id=None):
     media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype='application/zip')
     file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
     return file.get('id')
-# ------------------------ Configuração da API OpenAI ------------------------
+
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 def get_base64_image(image_path):
@@ -50,7 +48,6 @@ def get_base64_image(image_path):
         return ""
 
 def int_to_roman(num):
-    """Converte número inteiro para algarismos romanos."""
     val = [1000, 900, 500, 400,
            100, 90, 50, 40,
            10, 9, 5, 4,
@@ -69,11 +66,6 @@ def int_to_roman(num):
     return roman_num
 
 def add_page_number(image, display_number, alignment, style="Padrão", custom_color=None):
-    """
-    Sobrepõe o número (display_number) na parte inferior da imagem,
-    aplicando cor e contorno conforme o estilo escolhido e garantindo
-    que a numeração esteja a 2cm das margens da página.
-    """
     img = image.copy()
     draw = ImageDraw.Draw(img)
     try:
@@ -117,7 +109,7 @@ def add_page_number(image, display_number, alignment, style="Padrão", custom_co
     text_height = bbox[3] - bbox[1]
     width, height = img.size
     
-    margin = int(2 / 2.54 * 96)  # aproximadamente 75 pixels
+    margin = int(2 / 2.54 * 96)  # 2 cm ~ 75px
     
     if alignment == "Esquerda":
         x = margin
@@ -136,20 +128,43 @@ def add_page_number(image, display_number, alignment, style="Padrão", custom_co
     draw.text((x, y), text, font=font, fill=fill_color)
     return img
 
+def add_logo_bottom_center(image, logo_path=LOGO_PATH, margin_bottom_cm=1.0, max_logo_width=200):
+    """
+    Insere a logo no rodapé, centralizada, a 1 cm da margem inferior (ou outro valor em cm),
+    redimensionando a logo para largura máxima 'max_logo_width'.
+    """
+    if not os.path.exists(logo_path):
+        return image 
+    img = image.copy()
+    logo = Image.open(logo_path)
+
+    # Redimensiona a logo
+    ratio = max_logo_width / logo.width
+    new_w = int(logo.width * ratio * 0.5)
+    new_h = int(logo.height * ratio * 0.5)
+    logo = logo.resize((new_w, new_h), Image.LANCZOS)
+
+    if logo.mode != "RGBA":
+        logo = logo.convert("RGBA")
+
+    margin_px = int(margin_bottom_cm / 2.54 * 96)  # converte cm para pixels
+    x = (img.width - new_w) // 2
+    y = img.height - margin_px - new_h
+
+    if img.mode == "RGBA":
+        img.alpha_composite(logo, (x, y))
+    else:
+        img.paste(logo, (x, y), logo)
+    return img
+
 def generate_pdf(images):
-    """Gera um PDF com base em uma lista de objetos PIL.Image."""
     pdf_bytes = io.BytesIO()
     if images:
         images[0].save(pdf_bytes, format="PDF", save_all=True, append_images=images[1:])
     pdf_bytes.seek(0)
     return pdf_bytes
 
-
 def scale_and_crop_to_fill(img, target_w, target_h):
-    """
-    Redimensiona e recorta a imagem para preencher completamente uma área de target_w x target_h,
-    mantendo a proporção – semelhante à propriedade CSS 'cover'.
-    """
     w, h = img.size
     ratio_img = w / h
     ratio_target = target_w / target_h
@@ -171,15 +186,10 @@ def scale_and_crop_to_fill(img, target_w, target_h):
     return final_img
 
 def generate_pdf_sangria(images, dpi=300):
-    """
-    Gera um PDF onde cada página tem exatamente 6.125" x 9.25" (aproximadamente 1838 x 2775 pixels a 300 dpi).
-    Cada imagem é redimensionada e recortada para preencher completamente a página (estilo 'cover'),
-    sem deixar margens em branco.
-    """
     width_inch = 6.125
     height_inch = 9.25
-    target_w = int(round(width_inch * dpi))   # Aproximadamente 1838 pixels
-    target_h = int(round(height_inch * dpi))    # Aproximadamente 2775 pixels
+    target_w = int(round(width_inch * dpi))   # ~1838 px
+    target_h = int(round(height_inch * dpi))    # ~2775 px
 
     pdf_pages = []
     for img in images:
@@ -195,10 +205,6 @@ def generate_pdf_sangria(images, dpi=300):
     return pdf_bytes
 
 def generate_epub(files, start_page, end_page, initial_number, alignment, number_style, custom_color=None, add_numbering=True):
-    """
-    Gera um EPUB com numeração em rodapé para as páginas cujo número esteja entre start_page e end_page.
-    Se add_numbering for False, não será adicionada numeração no EPUB.
-    """
     book = epub.EpubBook()
     book.set_identifier("id_livro_123")
     book.set_title("Livro Ilustrado")
@@ -274,7 +280,6 @@ def generate_epub(files, start_page, end_page, initial_number, alignment, number
     return epub_bytes
 
 def move_page(file_index, new_position):
-    """Move a página para a nova posição, ajustando st.session_state.order."""
     order = st.session_state.order
     current_pos = order.index(file_index)
     order.pop(current_pos)
@@ -284,20 +289,16 @@ def move_page(file_index, new_position):
     st.rerun()
 
 def chunk_list(seq, chunk_size=7):
-    """Divide a lista em sub-listas de tamanho chunk_size."""
     for i in range(0, len(seq), chunk_size):
         yield seq[i:i + chunk_size]
 
 def book_page():
-    # Inicializa a flag se ainda não existir
     if "book_generated" not in st.session_state:
         st.session_state.book_generated = False
     if "zip_data" in st.session_state and not st.session_state.book_generated:
-        # Caso exista um ZIP da execução anterior, limpe-o
         del st.session_state.zip_data
         del st.session_state.zip_filename
 
-    # Exibe a logo centralizada, se disponível
     logo_base64 = get_base64_image("logo.png")
     if logo_base64:
         st.markdown(f"""
@@ -317,13 +318,8 @@ def book_page():
       - O intervalo de numeração;
       - O número inicial da numeração;
       - O estilo, o alinhamento e a cor da numeração.
-    
-    Clique em **Gerar Livro** para produzir:\n
-      - Um PDF padrão; \n
-      - Um PDF com "sangria" (imagem que preenche 100% da página, sem margens);\n
-      - Um EPUB para publicações digitais;\n
-      - Todos empacotados em um arquivo ZIP.
     """)
+
     
     uploaded_files = st.file_uploader("Escolha as imagens", type=["png", "jpg", "jpeg"], accept_multiple_files=True)
     
@@ -332,7 +328,6 @@ def book_page():
             st.session_state.file_data = []
             st.session_state.order = []
         
-        # Remove arquivos que não foram enviados novamente
         uploaded_names = {f.name for f in uploaded_files}
         indices_to_remove = [
             i for i, f in enumerate(st.session_state.file_data)
@@ -343,7 +338,6 @@ def book_page():
             st.session_state.order.remove(i)
             st.session_state.order = [idx - 1 if idx > i else idx for idx in st.session_state.order]
         
-        # Adiciona novos arquivos que ainda não estavam na sessão
         existing_names = {f["name"] for f in st.session_state.file_data}
         new_files = [f for f in uploaded_files if f.name not in existing_names]
         for f in new_files:
@@ -371,12 +365,14 @@ def book_page():
         st.write("### Defina o título do Livro")
         book_name = st.text_input("Digite o nome do livro:", value="MeuLivro")
         num_pages = len(order)
+        
         st.write("### Defina a numeração")
         num_start = st.number_input("Início da numeração (posição)", min_value=1, max_value=num_pages, value=1, key="num_start")
         num_end = st.number_input("Última página a ser numerada (posição)", min_value=1, max_value=num_pages, value=num_pages, key="num_end")
         if num_start > num_end:
             st.error("O início não pode ser maior que o fim.")
         initial_number = st.number_input("Número inicial", min_value=1, value=1, key="initial_number")
+        
         number_styles = ["Padrão", "Romano", "Fresco", "Moderno", "Vintage", "Elegante"]
         number_style = st.selectbox("Estilo de numeração", number_styles, index=0)
         
@@ -399,27 +395,39 @@ def book_page():
         
         custom_color = st.color_picker("Escolha a cor para a numeração", value="#FFFFFF")
         alignment = st.selectbox("Alinhamento da numeração", ["Esquerda", "Central", "Direita"], index=1)
-        
-        # Opção para incluir numeração no EPUB
-        include_epub_numbering = st.checkbox("Incluir numeração no EPUB", value=True)
     
+         # Adiciona os checkboxes para selecionar as opções desejadas
+        include_epub_numbering = st.checkbox("Incluir numeração no EPUB", value=True)
+        include_logo = st.checkbox("Incluir logo da editora na capa e última página", value=True)
+
         if st.button("Gerar Livro"):
             new_order = st.session_state.order
+            reordered_files = [st.session_state.file_data[i] for i in new_order]
+            
             image_list = []
             for pos, file_index in enumerate(new_order, start=1):
                 f_dict = st.session_state.file_data[file_index]
                 img = Image.open(io.BytesIO(f_dict["data"]))
+                
                 if img.mode != "RGB":
                     img = img.convert("RGB")
+                
                 if num_start <= pos <= num_end:
                     display_number = initial_number + (pos - num_start)
                     img = add_page_number(img, display_number, alignment, style=number_style, custom_color=custom_color)
+                
+                # Aplica a logo somente se o checkbox estiver marcado
+                if include_logo and (pos == 1 or pos == len(new_order)):
+                    img = add_logo_bottom_center(img, logo_path=LOGO_PATH, margin_bottom_cm=1.0, max_logo_width=200)
+                
+                with io.BytesIO() as output:
+                    img.save(output, format="JPEG")
+                    reordered_files[pos - 1]["data"] = output.getvalue()
+                
                 image_list.append(img)
             
-            # Gera os arquivos:
             pdf_bytes = generate_pdf(image_list)
             sangria_pdf_bytes = generate_pdf_sangria(image_list, dpi=300)
-            reordered_files = [st.session_state.file_data[i] for i in new_order]
             epub_bytes = generate_epub(
                 reordered_files,
                 num_start,
@@ -431,13 +439,11 @@ def book_page():
                 add_numbering=include_epub_numbering
             )
             
-            # Define os nomes dos arquivos com base no nome do livro
             pdf_filename = f"{book_name}.pdf"
             sangria_pdf_filename = f"{book_name}_sangria.pdf"
             epub_filename = "livro.epub"
             zip_filename = f"{book_name}.zip"
             
-            # Empacota todos os arquivos em um ZIP
             zip_bytes = io.BytesIO()
             with zipfile.ZipFile(zip_bytes, mode="w") as zipf:
                 zipf.writestr(pdf_filename, pdf_bytes.getvalue())
@@ -445,7 +451,6 @@ def book_page():
                 zipf.writestr(epub_filename, epub_bytes.getvalue())
             zip_bytes.seek(0)
             
-            # Armazena os dados do ZIP e o nome no st.session_state
             st.session_state.zip_data = zip_bytes.getvalue()
             st.session_state.zip_filename = zip_filename
             st.session_state.book_generated = True
@@ -453,14 +458,16 @@ def book_page():
             st.success("Livro gerado com sucesso!")
             st.download_button("Baixar ZIP", data=zip_bytes, file_name=zip_filename, mime="application/zip")
     
-    # Exibe o botão de Enviar para o Google Drive somente se o livro foi gerado
     if st.session_state.get("book_generated", False):
         if st.button("Enviar para o Google Drive"):
-            folder_id = "1aOIGtkAVjfh5qfxWidgbR-yLp0C4ZzjG"  # Substitua pelo ID real da pasta
+            folder_id = "1aOIGtkAVjfh5qfxWidgbR-yLp0C4ZzjG"
             file_id = upload_to_drive(st.session_state.zip_data, st.session_state.zip_filename, folder_id=folder_id)
-            drive_link = f"https://drive.google.com/file/d/{file_id}/view"
-            st.success(f"Arquivo enviado com sucesso! Nome do arquivo: {book_name}")
-            st.markdown(f"✅ [Clique aqui para acessar o arquivo no Google Drive]({drive_link})")
+            if file_id:
+                drive_link = f"https://drive.google.com/file/d/{file_id}/view"
+                st.success(f"Arquivo enviado com sucesso! Nome do arquivo: {book_name}")
+                st.markdown(f"✅ [Clique aqui para acessar o arquivo no Google Drive]({drive_link})")
+            else:
+                st.error("Falha ao enviar para o Google Drive.")
 
 if __name__ == "__main__":
     book_page()
