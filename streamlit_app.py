@@ -68,8 +68,13 @@ def int_to_roman(num):
 def add_page_number(image, display_number, alignment, style="Padrão", custom_color=None):
     img = image.copy()
     draw = ImageDraw.Draw(img)
+    
+    # Calcula um tamanho de fonte proporcional à altura da imagem
+    width, height = img.size
+    font_size = int(height / 35)  # ajuste esse divisor conforme necessário para o tamanho desejado
+    
     try:
-        font = ImageFont.truetype("arial.ttf", 36)
+        font = ImageFont.truetype("arial.ttf", font_size)
     except IOError:
         font = ImageFont.load_default()
     
@@ -288,6 +293,14 @@ def move_page(file_index, new_position):
     st.session_state.order = order
     st.rerun()
 
+# Nova função para remover uma página da ordenação
+def remove_page(file_index):
+    st.session_state.file_data.pop(file_index)
+    st.session_state.order = list(range(len(st.session_state.file_data)))
+    # Incrementa a chave do uploader para reinicializá-lo
+    st.session_state.upload_key += 1
+    st.rerun()
+
 def chunk_list(seq, chunk_size=7):
     for i in range(0, len(seq), chunk_size):
         yield seq[i:i + chunk_size]
@@ -306,8 +319,8 @@ def book_page():
                 <img src="data:image/png;base64,{logo_base64}" style="width:230px; margin-bottom:-10px;" />
             </div>
         """, unsafe_allow_html=True)
-    
-    st.title("Projeto Thoth - Geração de Livros")
+
+    st.title("Projeto Toth - Geração de Livros")
     st.write("""
     Selecione as imagens do livro. Você pode selecionar uma ou várias páginas.
     Para cada página, insira a posição desejada e clique em **Atualizar posição** para reordenar.
@@ -320,48 +333,60 @@ def book_page():
       - O estilo, o alinhamento e a cor da numeração.
     """)
 
-    
-    uploaded_files = st.file_uploader("Escolha as imagens", type=["png", "jpg", "jpeg"], accept_multiple_files=True)
-    
+    # Inicializa file_data, order e upload_key (para controlar o uploader) se ainda não estiverem definidas
+    if 'file_data' not in st.session_state:
+        st.session_state.file_data = []
+    if 'order' not in st.session_state:
+        st.session_state.order = list(range(len(st.session_state.file_data)))
+    if 'upload_key' not in st.session_state:
+        st.session_state.upload_key = 0
+
+    # Sempre exibe o file uploader com uma chave dinâmica, permitindo novos uploads
+    uploaded_files = st.file_uploader(
+        "Escolha as imagens",
+        type=["png", "jpg", "jpeg"],
+        accept_multiple_files=True,
+        key=f"upload_{st.session_state.upload_key}"
+    )
     if uploaded_files:
-        if 'file_data' not in st.session_state:
-            st.session_state.file_data = []
-            st.session_state.order = []
-        
-        uploaded_names = {f.name for f in uploaded_files}
-        indices_to_remove = [
-            i for i, f in enumerate(st.session_state.file_data)
-            if f["name"] not in uploaded_names
-        ]
-        for i in sorted(indices_to_remove, reverse=True):
-            del st.session_state.file_data[i]
-            st.session_state.order.remove(i)
-            st.session_state.order = [idx - 1 if idx > i else idx for idx in st.session_state.order]
-        
-        existing_names = {f["name"] for f in st.session_state.file_data}
-        new_files = [f for f in uploaded_files if f.name not in existing_names]
-        for f in new_files:
-            st.session_state.file_data.append({
-                "name": f.name,
-                "data": f.read()
-            })
-            st.session_state.order.append(len(st.session_state.file_data) - 1)
-    
-    if 'file_data' in st.session_state and st.session_state.file_data:
+        # Evita duplicação comparando nomes dos arquivos já presentes
+        existing_names = [f["name"] for f in st.session_state.file_data]
+        for f in uploaded_files:
+            if f.name not in existing_names:
+                st.session_state.file_data.append({
+                    "name": f.name,
+                    "data": f.read()
+                })
+                st.session_state.order.append(len(st.session_state.file_data) - 1)
+
+    if st.session_state.file_data:
         order = st.session_state.order
         st.write("### Reordene as páginas (7 por linha)")
         for row_chunk in chunk_list(order, 7):
             cols = st.columns(len(row_chunk))
+            st.markdown(
+            "<hr style='border: none; border-top: 1px dashed #bbb; margin: 20px 0;'>",
+            unsafe_allow_html=True
+            )
             for idx, col in enumerate(cols):
                 file_index = row_chunk[idx]
                 f_dict = st.session_state.file_data[file_index]
+                
+                # Botão "Excluir" no topo da figura que também atualiza o uploader
+                if col.button("🗑  Excluir", key=f"delete_{file_index}"):
+                    remove_page(file_index)
+                
                 image = Image.open(io.BytesIO(f_dict["data"]))
                 col.image(image, use_container_width=True)
                 current_position = order.index(file_index) + 1
                 new_pos = col.number_input("Posição", min_value=1, max_value=len(order), value=current_position, key=f"pos_{file_index}")
-                if col.button("Atualizar posição", key=f"update_{file_index}"):
+                if col.button("↔ Mover", key=f"update_{file_index}"):
                     move_page(file_index, new_pos)
-        
+
+        # Espaçamento extra entre as linhas
+
+
+        # Resto do código para definição do título, numeração e geração do livro
         st.write("### Defina o título do Livro")
         book_name = st.text_input("Digite o nome do livro:", value="MeuLivro")
         num_pages = len(order)
@@ -396,7 +421,6 @@ def book_page():
         custom_color = st.color_picker("Escolha a cor para a numeração", value="#FFFFFF")
         alignment = st.selectbox("Alinhamento da numeração", ["Esquerda", "Central", "Direita"], index=1)
     
-         # Adiciona os checkboxes para selecionar as opções desejadas
         include_epub_numbering = st.checkbox("Incluir numeração no EPUB", value=True)
         include_logo = st.checkbox("Incluir logo da editora na capa e última página", value=True)
 
@@ -416,7 +440,6 @@ def book_page():
                     display_number = initial_number + (pos - num_start)
                     img = add_page_number(img, display_number, alignment, style=number_style, custom_color=custom_color)
                 
-                # Aplica a logo somente se o checkbox estiver marcado
                 if include_logo and (pos == 1 or pos == len(new_order)):
                     img = add_logo_bottom_center(img, logo_path=LOGO_PATH, margin_bottom_cm=1.0, max_logo_width=200)
                 
