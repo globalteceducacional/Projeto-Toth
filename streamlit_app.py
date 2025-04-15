@@ -323,7 +323,7 @@ def book_page():
     st.title("Projeto Toth - Geração de Livros")
     st.write("""
     Selecione as imagens do livro. Você pode selecionar uma ou várias páginas.
-    Para cada página, insira a posição desejada e clique em **Atualizar posição** para reordenar.
+    Para cada página, insira a posição desejada e clique em **Mover** para reordenar.
     Se uma página for inserida em uma posição já ocupada, as outras serão deslocadas.
     
     Em seguida, defina:
