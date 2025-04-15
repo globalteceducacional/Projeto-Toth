@@ -71,7 +71,7 @@ def add_page_number(image, display_number, alignment, style="Padrão", custom_co
     
     # Calcula um tamanho de fonte proporcional à altura da imagem
     width, height = img.size
-    font_size = int(height / 35)  # ajuste esse divisor conforme necessário para o tamanho desejado
+    font_size = int(height / 10)  # ajuste esse divisor conforme necessário para o tamanho desejado
     
     try:
         font = ImageFont.truetype("arial.ttf", font_size)
