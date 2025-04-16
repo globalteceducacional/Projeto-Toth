@@ -71,15 +71,14 @@ def add_page_number(image, display_number, alignment, style="Padrão", custom_co
     
     # Calcula um tamanho de fonte proporcional à altura da imagem
     # Mantemos as dimensões reais para cálculos de posicionamento, mas usamos um valor padrão para o tamanho da fonte.
-    width, height = img.size
-    default_height = 2775  # Altura padrão de exportação (ex.: PDF com sangria)
-    font_size = int(default_height)  # ajuste esse divisor conforme necessário
+    width, height = img.size  # Altura padrão de exportação (ex.: PDF com sangria)
+    font_size = int(height/20)  # ajuste esse divisor conforme necessário
     
     try:
-        font = ImageFont.truetype("arial.ttf", font_size)
+        font = ImageFont.truetype(os.path.join("fonts", "Roboto-Regular.ttf"), font_size)
     except IOError:
         font = ImageFont.load_default()
-    
+
     text = int_to_roman(display_number) if style == "Romano" else str(display_number)
     
     if style == "Padrão":
