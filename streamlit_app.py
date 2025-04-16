@@ -454,12 +454,12 @@ def book_page():
         number_style = st.session_state.selected_style
         
         style_thumbnails = {
-            "Padrão": "thumb_padrao.png",
-            "Romano": "thumb_romano.png",
-            "Fresco": "thumb_fresco.png",
-            "Moderno": "thumb_moderno.png",
-            "Elegante": "thumb_elegante.png",
-            "Desenhado": "thumb_desenhado.png"
+            "Padrão": "thumbs/thumb_padrao.png",
+            "Romano": "thumbs/thumb_romano.png",
+            "Fresco": "thumbs/thumb_fresco.png",
+            "Moderno": "thumbs/thumb_moderno.png",
+            "Elegante": "thumbs/thumb_elegante.png",
+            "Desenhado": "thumbs/thumb_desenhado.png"
         }
         
         # Se não houver estilo selecionado, define 'Padrão'
