@@ -70,8 +70,10 @@ def add_page_number(image, display_number, alignment, style="Padrão", custom_co
     draw = ImageDraw.Draw(img)
     
     # Calcula um tamanho de fonte proporcional à altura da imagem
+    # Mantemos as dimensões reais para cálculos de posicionamento, mas usamos um valor padrão para o tamanho da fonte.
     width, height = img.size
-    font_size = int(height / 1)  # ajuste esse divisor conforme necessário para o tamanho desejado
+    default_height = 2775  # Altura padrão de exportação (ex.: PDF com sangria)
+    font_size = int(default_height / 25)  # ajuste esse divisor conforme necessário
     
     try:
         font = ImageFont.truetype("arial.ttf", font_size)
