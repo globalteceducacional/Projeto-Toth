@@ -7,6 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 from ebooklib import epub
 import io
 import zipfile
+import hashlib
 
 # ------------------ Integração com Google Drive ------------------
 from google.oauth2 import service_account
@@ -26,14 +27,14 @@ def upload_to_drive(file_bytes, filename, folder_id=None):
     service_account_info = json.loads(service_account_json)
     credentials = service_account.Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
     service = build('drive', 'v3', credentials=credentials)
-
+    
     file_metadata = {
         'name': filename,
         'mimeType': 'application/zip'
     }
     if folder_id:
         file_metadata['parents'] = [folder_id]
-
+    
     media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype='application/zip')
     file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
     return file.get('id')
@@ -70,8 +71,8 @@ def add_page_number(image, display_number, alignment, style="Padrão", custom_co
     draw = ImageDraw.Draw(img)
     
     # Utiliza uma altura padrão (ex.: altura de exportação do PDF com sangria)
-    default_height = 2775  # pixels, conforme definição no generate_pdf_sangria
-    font_size = int(default_height / 25)  # ajuste esse divisor conforme necessário
+    default_height = 2775  # pixels
+    font_size = int(default_height / 40)  # ajuste esse divisor conforme necessário
 
     # Seleciona a fonte conforme o estilo
     if style == "Romano":
@@ -80,14 +81,11 @@ def add_page_number(image, display_number, alignment, style="Padrão", custom_co
         font_path = os.path.join("fonts", "Pacifico-Regular.ttf")
     elif style == "Moderno":
         font_path = os.path.join("fonts", "Montserrat-Regular.ttf")
-    elif style == "Vintage":
-        font_path = os.path.join("fonts", "CinzelDecorative-Regular.ttf")
     elif style == "Elegante":
         font_path = os.path.join("fonts", "CormorantGaramond-Regular.ttf")
     elif style == "Desenhado":
-        font_path = os.path.join("fonts", "ComicNeue-Regular.ttf")
+        font_path = os.path.join("fonts", "ButterflyKids-Regular.ttf")
     else:
-        # Padrão
         font_path = os.path.join("fonts", "Roboto-Regular.ttf")
     
     try:
@@ -97,7 +95,7 @@ def add_page_number(image, display_number, alignment, style="Padrão", custom_co
 
     text = int_to_roman(display_number) if style == "Romano" else str(display_number)
 
-    # Define as cores e os contornos (outline) conforme o estilo
+    # Define cores e contornos (outline) conforme o estilo
     if style in ["Padrão", "Romano"]:
         fill_color = custom_color if custom_color else "#FFFFFF"
         outline_range = 1
@@ -110,16 +108,12 @@ def add_page_number(image, display_number, alignment, style="Padrão", custom_co
         fill_color = custom_color if custom_color else "#007BFF"
         outline_range = 0
         do_outline = False
-    elif style == "Vintage":
-        fill_color = custom_color if custom_color else "#A0522D"
-        outline_range = 2
-        do_outline = True
     elif style == "Elegante":
         fill_color = custom_color if custom_color else "#8E44AD"
         outline_range = 1
         do_outline = True
     elif style == "Desenhado":
-        fill_color = custom_color if custom_color else "#FF69B4"  # cor lúdica, exemplo: rosa choque
+        fill_color = custom_color if custom_color else "#FF69B4"
         outline_range = 1
         do_outline = True
     else:
@@ -127,7 +121,7 @@ def add_page_number(image, display_number, alignment, style="Padrão", custom_co
         outline_range = 1
         do_outline = True
 
-    # Posicionamento baseado na largura real da imagem
+    # Posicionamento com base na largura real da imagem
     width, height = img.size
     bbox = draw.textbbox((0, 0), text, font=font)
     text_width = bbox[2] - bbox[0]
@@ -207,8 +201,8 @@ def scale_and_crop_to_fill(img, target_w, target_h):
 def generate_pdf_sangria(images, dpi=300):
     width_inch = 6.125
     height_inch = 9.25
-    target_w = int(round(width_inch * dpi))
-    target_h = int(round(height_inch * dpi))
+    target_w = int(round(width_inch * dpi))   # ~1838 px
+    target_h = int(round(height_inch * dpi))    # ~2775 px
 
     pdf_pages = []
     for img in images:
@@ -235,7 +229,6 @@ def generate_epub(files, start_page, end_page, initial_number, alignment, number
         "Romano": custom_color if custom_color else "#FFFFFF",
         "Fresco": custom_color if custom_color else "#FFD700",
         "Moderno": custom_color if custom_color else "#007BFF",
-        "Vintage": custom_color if custom_color else "#A0522D",
         "Elegante": custom_color if custom_color else "#8E44AD"
     }
     
@@ -307,9 +300,16 @@ def move_page(file_index, new_position):
     st.session_state.order = order
     st.rerun()
 
+# Atualização da remoção: a ordenação é ajustada sem reinicializar para preservar a configuração
 def remove_page(file_index):
     st.session_state.file_data.pop(file_index)
-    st.session_state.order = list(range(len(st.session_state.file_data)))
+    new_order = []
+    for idx in st.session_state.order:
+        if idx < file_index:
+            new_order.append(idx)
+        elif idx > file_index:
+            new_order.append(idx - 1)
+    st.session_state.order = new_order
     st.session_state.upload_key += 1
     st.rerun()
 
@@ -345,6 +345,7 @@ def book_page():
       - O estilo, o alinhamento e a cor da numeração.
     """)
 
+    # Inicializa file_data, order e upload_key se ainda não estiverem definidas
     if 'file_data' not in st.session_state:
         st.session_state.file_data = []
     if 'order' not in st.session_state:
@@ -352,6 +353,7 @@ def book_page():
     if 'upload_key' not in st.session_state:
         st.session_state.upload_key = 0
 
+    # Ao fazer o upload, armazenamos também os dados originais para não acumular as modificações
     uploaded_files = st.file_uploader(
         "Escolha as imagens",
         type=["png", "jpg", "jpeg"],
@@ -362,9 +364,11 @@ def book_page():
         existing_names = [f["name"] for f in st.session_state.file_data]
         for f in uploaded_files:
             if f.name not in existing_names:
+                bytes_data = f.read()
                 st.session_state.file_data.append({
                     "name": f.name,
-                    "data": f.read()
+                    "original_data": bytes_data,   # Armazena a imagem original
+                    "data": bytes_data             # Inicialmente, data é idêntica à original
                 })
                 st.session_state.order.append(len(st.session_state.file_data) - 1)
 
@@ -421,22 +425,16 @@ def book_page():
             for idx, col in enumerate(cols):
                 file_index = row_chunk[idx]
                 f_dict = st.session_state.file_data[file_index]
-                with col:
-                    st.markdown('<div class="my-card">', unsafe_allow_html=True)
-                    
-                    if st.button("🗑  Excluir", key=f"delete_{file_index}"):
-                        remove_page(file_index)
-                    
-                    st.image(Image.open(io.BytesIO(f_dict["data"])), use_container_width=True)
-                    
-                    current_position = order.index(file_index) + 1
-                    new_pos = st.number_input("Posição", min_value=1, max_value=len(order),
-                                              value=current_position, key=f"pos_{file_index}")
-                    
-                    if st.button("↔ Mover", key=f"update_{file_index}"):
-                        move_page(file_index, new_pos)
-                    
-                    st.markdown('</div>', unsafe_allow_html=True)
+                
+                if col.button("🗑  Excluir", key=f"delete_{file_index}"):
+                    remove_page(file_index)
+                
+                image = Image.open(io.BytesIO(f_dict["data"]))
+                col.image(image, use_container_width=True)
+                current_position = order.index(file_index) + 1
+                new_pos = col.number_input("Posição", min_value=1, max_value=len(order), value=current_position, key=f"pos_{file_index}")
+                if col.button("↔ Mover", key=f"update_{file_index}"):
+                    move_page(file_index, new_pos)
     
         st.write("### Defina o título do Livro")
         book_name = st.text_input("Digite o nome do livro:", value="MeuLivro")
@@ -449,26 +447,43 @@ def book_page():
             st.error("O início não pode ser maior que o fim.")
         initial_number = st.number_input("Número inicial", min_value=1, value=1, key="initial_number")
         
-        number_styles = ["Padrão", "Romano", "Fresco", "Moderno", "Vintage", "Elegante", "Desenhado"]
-        number_style = st.selectbox("Estilo de numeração", number_styles, index=0)
+        if "selected_style" not in st.session_state:
+            st.session_state["selected_style"] = "Padrão"
+            
+        number_styles = ["Padrão", "Romano", "Fresco", "Moderno", "Elegante", "Desenhado"]
+        number_style = st.session_state.selected_style
         
         style_thumbnails = {
             "Padrão": "thumb_padrao.png",
             "Romano": "thumb_romano.png",
             "Fresco": "thumb_fresco.png",
             "Moderno": "thumb_moderno.png",
-            "Vintage": "thumb_vintage.png",
             "Elegante": "thumb_elegante.png",
             "Desenhado": "thumb_desenhado.png"
         }
-        thumb_path = style_thumbnails.get(number_style, "")
-        thumb_base64 = get_base64_image(thumb_path)
-        if thumb_base64:
-            st.markdown(f"""
-                <div style="text-align:center;">
-                    <img src="data:image/png;base64,{thumb_base64}" style="width:100px;" />
-                </div>
-            """, unsafe_allow_html=True)
+        
+        # Se não houver estilo selecionado, define 'Padrão'
+        if "selected_style" not in st.session_state:
+            st.session_state.selected_style = "Padrão"
+
+        # Título da sessão
+        st.markdown("### Escolha o estilo de numeração:")
+
+        # Define quantas colunas por linha
+        n_cols = 3
+        styles = list(style_thumbnails.keys())
+
+        # Exibe as opções em grade
+        for chunk_start in range(0, len(styles), n_cols):
+            cols = st.columns(n_cols)
+            chunk = styles[chunk_start:chunk_start + n_cols]
+            for i, style in enumerate(chunk):
+                with cols[i]:
+                    st.image(style_thumbnails[style], width=70)
+                    if st.button(style, key=f"style_{style}"):
+                        st.session_state.selected_style = style
+        
+        st.write(f"**Estilo selecionado:** {st.session_state.selected_style}")
         
         custom_color = st.color_picker("Escolha a cor para a numeração", value="#FFFFFF")
         alignment = st.selectbox("Alinhamento da numeração", ["Esquerda", "Central", "Direita"], index=1)
@@ -476,14 +491,33 @@ def book_page():
         include_epub_numbering = st.checkbox("Incluir numeração no EPUB", value=True)
         include_logo = st.checkbox("Incluir logo da editora na capa e última página", value=True)
 
+        # Validação da configuração para forçar nova geração se alterado
+        config = {
+            "book_name": book_name,
+            "num_start": num_start,
+            "num_end": num_end,
+            "initial_number": initial_number,
+            "number_style": number_style,
+            "custom_color": custom_color,
+            "alignment": alignment,
+            "include_epub_numbering": include_epub_numbering,
+            "include_logo": include_logo
+        }
+        new_config_hash = hashlib.md5(json.dumps(config, sort_keys=True).encode("utf-8")).hexdigest()
+        if st.session_state.get("config_hash") != new_config_hash:
+            st.session_state.config_hash = new_config_hash
+            st.session_state.book_generated = False
+
         if st.button("Gerar Livro"):
             new_order = st.session_state.order
-            reordered_files = [st.session_state.file_data[i] for i in new_order]
+            # Cria uma cópia dos arquivos sem modificar os dados originais
+            reordered_files = [dict(st.session_state.file_data[i]) for i in new_order]
             
             image_list = []
             for pos, file_index in enumerate(new_order, start=1):
                 f_dict = st.session_state.file_data[file_index]
-                img = Image.open(io.BytesIO(f_dict["data"]))
+                # Sempre utiliza os dados originais para não acumular numerações
+                img = Image.open(io.BytesIO(f_dict["original_data"]))
                 
                 if img.mode != "RGB":
                     img = img.convert("RGB")
@@ -497,6 +531,7 @@ def book_page():
                 
                 with io.BytesIO() as output:
                     img.save(output, format="JPEG")
+                    # Atualiza os arquivos da cópia temporária somente para geração atual
                     reordered_files[pos - 1]["data"] = output.getvalue()
                 
                 image_list.append(img)
