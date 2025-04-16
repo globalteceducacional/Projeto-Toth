@@ -72,7 +72,7 @@ def add_page_number(image, display_number, alignment, style="Padrão", custom_co
     
     # Utiliza uma altura padrão (ex.: altura de exportação do PDF com sangria)
     default_height = 2775  # pixels
-    font_size = int(default_height / 40)  # ajuste esse divisor conforme necessário
+    font_size = int(default_height / 45)  # ajuste esse divisor conforme necessário
 
     # Seleciona a fonte conforme o estilo
     if style == "Romano":
