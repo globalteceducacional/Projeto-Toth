@@ -75,7 +75,7 @@ def add_page_number(image, display_number, alignment, style="Padrão", custom_co
     font_size = int(height/20)  # ajuste esse divisor conforme necessário
     
     try:
-        font = ImageFont.truetype(os.path.join("fonts", "Roboto-Regular.ttf"), font_size)
+        font = ImageFont.truetype("Roboto-Regular.ttf", font_size)
     except IOError:
         font = ImageFont.load_default()
 
