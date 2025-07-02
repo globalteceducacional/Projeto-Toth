@@ -42,7 +42,6 @@ Ideal para editoras, escolas e produções educacionais rápidas.
 ├── requirements.txt
 └── README.md
 
-
 ---
 
 ## ⚙️ Instalação
@@ -72,9 +71,4 @@ Contribuições são bem-vindas! Abra issues ou pull requests com melhorias, nov
 📄 Licença
 Este projeto está licenciado sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.
 
-
-✔️ **Pronto:** basta copiar **todo esse bloco** para seu `README.md` no GitHub do Projeto Toth.  
-Me avise se quiser também o **README com badge de deploy Streamlit Cloud** ou workflow de CI/CD.
-
 ```
-
