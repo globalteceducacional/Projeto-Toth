@@ -59,6 +59,7 @@ pip install -r requirements.txt
 streamlit run streamlit_app.py
 
 Funcionalidades Principais
+
 ✅ Upload de imagens em lote
 ✅ Reordenação dinâmica das páginas
 ✅ Geração de livros com numeração estilizada
