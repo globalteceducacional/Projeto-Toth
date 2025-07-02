@@ -74,7 +74,7 @@ Funcionalidades Principais
 
 Contribuições são bem-vindas! Abra issues ou pull requests com melhorias, novos estilos ou correções.
 
-## 🙌 Desenvolvido por
+## 🙌 Colabodores
 
 Este projeto foi desenvolvido por [@saunderz](https://github.com/saunderz) para [Globaltec Educacional](https://github.com/globalteceducacional).
 
