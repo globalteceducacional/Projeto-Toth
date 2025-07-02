@@ -61,9 +61,13 @@ streamlit run streamlit_app.py
 Funcionalidades Principais
 
 ✅ Upload de imagens em lote
+
 ✅ Reordenação dinâmica das páginas
+
 ✅ Geração de livros com numeração estilizada
+
 ✅ Exportação em ZIP contendo PDF (com e sem sangria) e EPUB
+
 ✅ Envio automático ao Google Drive
 
 🤝 Contribuições
