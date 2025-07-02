@@ -70,9 +70,13 @@ Funcionalidades Principais
 
 ✅ Envio automático ao Google Drive
 
-🤝 Contribuições
+## 🤝 Contribuições
 
 Contribuições são bem-vindas! Abra issues ou pull requests com melhorias, novos estilos ou correções.
 
-📄 Licença
+## 🙌 Desenvolvido por
+
+Este projeto foi desenvolvido por [@saunderz](https://github.com/saunderz) para [Globaltec Educacional](https://github.com/globalteceducacional).
+
+## 📄 Licença
 Este projeto está licenciado sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.
