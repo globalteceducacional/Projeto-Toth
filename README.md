@@ -34,7 +34,6 @@ Ideal para editoras, escolas e produções educacionais rápidas.
 ---
 
 ## 📂 Estrutura do Projeto
-
 ```
 ProjetoToth/
 ├── streamlit_app.py
@@ -43,7 +42,6 @@ ProjetoToth/
 │ └── logo.png
 ├── requirements.txt
 └── README.md
-
 ```
 ---
 
