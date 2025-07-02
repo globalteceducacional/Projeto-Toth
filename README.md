@@ -49,7 +49,6 @@ ProjetoToth/
 
 1. Clone o repositório:
 
-
 git clone https://github.com/seuusuario/ProjetoToth.git
 cd ProjetoToth
 
@@ -67,6 +66,7 @@ Funcionalidades Principais
 ✅ Envio automático ao Google Drive
 
 🤝 Contribuições
+
 Contribuições são bem-vindas! Abra issues ou pull requests com melhorias, novos estilos ou correções.
 
 📄 Licença
